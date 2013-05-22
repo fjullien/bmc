@@ -1,0 +1,27 @@
+# Object files
+*.o
+*.cmd
+*.ko
+
+# Libraries
+*.lib
+*.a
+
+# Shared objects (inc. Windows DLLs)
+*.dll
+*.so
+*.so.*
+*.dylib
+
+# Executables
+*.exe
+*.out
+*.app
+
+#os/module
+arch/sandbox/os/.tmp_versions/
+arch/sandbox/os/Module.symvers
+arch/sandbox/os/i2c-openbmc-stub.ko.unsigned
+arch/sandbox/os/i2c-openbmc-stub.mod.c
+arch/sandbox/os/modules.order
+
