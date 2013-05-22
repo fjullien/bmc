@@ -24,9 +24,14 @@
 #include <linux/init.h>
 #include <linux/module.h>
 #include <linux/kernel.h>
-#include <linux/slab.h>
 #include <linux/errno.h>
 #include <linux/i2c.h>
+#include <linux/cdev.h>
+#include <linux/module.h>
+#include <linux/fs.h>
+#include <linux/cdev.h>
+#include <asm/uaccess.h>
+#include <asm/io.h>
 
 #define MAX_CHIPS 10
 #define STUB_FUNC (I2C_FUNC_SMBUS_QUICK | I2C_FUNC_SMBUS_BYTE | \
@@ -49,6 +54,11 @@ struct stub_chip {
 };
 
 static struct stub_chip *stub_chips;
+
+static u16 read_buffer[256];
+struct cdev stub_cdev;
+dev_t devid;
+static struct class *cl;
 
 /* Return negative errno on error. */
 static s32 stub_xfer(struct i2c_adapter *adap, u16 addr, unsigned short flags,
@@ -135,6 +145,9 @@ static s32 stub_xfer(struct i2c_adapter *adap, u16 addr, unsigned short flags,
 				addr, len, command);
 		} else {
 			len = data->block[0];
+			for (i = 0; i < len; i++)
+				printk("%02X ", data->block[1 + i]);
+			printk("\n");
 			dev_dbg(&adap->dev,
 				"i2c block data - addr 0x%02x, wrote  %d bytes at 0x%02x.\n",
 				addr, len, command);
@@ -194,6 +207,39 @@ static struct i2c_adapter stub_adapter = {
 	.name		= "SMBus stub driver",
 };
 
+static ssize_t stub_write(struct file *file, const char __user *data, size_t len, loff_t *ppos)
+{
+	printk("----> stub_write\n");
+	return len;
+}
+
+static ssize_t stub_read(struct file *file, char __user *buf, size_t len, loff_t *ppos)
+{
+	printk("----> stub_read\n");
+	return len;
+}
+
+static ssize_t stub_open(struct inode *inode, struct file *file)
+{
+	printk("----> stub_open\n");
+	return 0;
+}
+
+static int stub_release(struct inode *inode, struct file *file)
+{
+	printk("----> stub_release\n");
+	return 0;
+}
+
+static const struct file_operations stub_cdev_fops = {
+	.owner = THIS_MODULE,
+	.write = stub_write,
+	.read = stub_read,
+	.open = stub_open,
+	.release = stub_release,
+	/*.ioctl = stub_ioctl,*/
+};
+
 static int __init i2c_stub_init(void)
 {
 	int i, ret;
@@ -220,6 +266,14 @@ static int __init i2c_stub_init(void)
 		return -ENOMEM;
 	}
 
+	cl = class_create(THIS_MODULE, "i2cstub");
+	alloc_chrdev_region(&devid, 0, 1, "i2cstub");
+
+	cdev_init(&stub_cdev, &stub_cdev_fops);
+	cdev_add(&stub_cdev, devid, 1);
+
+	device_create(cl, NULL, devid, NULL, "stub0");
+
 	ret = i2c_add_adapter(&stub_adapter);
 	if (ret)
 		kfree(stub_chips);
@@ -229,6 +283,10 @@ static int __init i2c_stub_init(void)
 static void __exit i2c_stub_exit(void)
 {
 	i2c_del_adapter(&stub_adapter);
+	cdev_del(&stub_cdev);
+	device_destroy(cl, devid);
+	class_destroy(cl);
+	unregister_chrdev_region(devid, 1);
 	kfree(stub_chips);
 }
 
