@@ -18,4 +18,4 @@ $(EXEC): $(OBJ)
 .PHONY: clean
 
 clean:
-	@rm -rf *.o
+	@rm -rf *.o *.d
