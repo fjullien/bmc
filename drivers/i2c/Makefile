@@ -8,11 +8,11 @@ all: $(EXEC)
 	@:
 
 $(EXEC): $(OBJ)
-	@echo [LD] $@
+	@echo '   [LD]' $@
 	@$(LD) -r $^ -o $@ $(LDFLAGS)
 
 %.o: %.c
-	@echo [CC] $@
+	@echo '   [CC]' $@
 	@$(CC) -o $@ -c $< $(CFLAGS)
 
 .PHONY: clean
