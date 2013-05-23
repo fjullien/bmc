@@ -2,6 +2,7 @@
 *.o
 *.cmd
 *.ko
+*.d
 
 # Libraries
 *.lib
@@ -18,7 +19,7 @@
 *.out
 *.app
 
-#os/module
+# os/module
 arch/sandbox/os/.tmp_versions/
 arch/sandbox/os/Module.symvers
 arch/sandbox/os/i2c-openbmc-stub.ko.unsigned
