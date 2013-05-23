@@ -1,0 +1,5 @@
+menu "Drivers"
+
+source "drivers/i2c/Kconfig"
+
+endmenu

@@ -1,4 +1,11 @@
+# Read in config
+-include $(srctree)/include/config/auto.conf
+
 SRC= main.c
+
+#ifdef CONFIG_DRIVER_TEST
+#SRC += test_i2c.c
+#endif
 
 OBJ= $(SRC:.c=.o)
 EXEC=built-in.o

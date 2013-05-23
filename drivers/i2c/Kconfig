@@ -1,0 +1,9 @@
+config DRIVER_TEST
+	bool "test i2c driver"
+	help
+	  This option enables support for the test chip.
+
+config DRIVER_TEST1
+	bool "test1 i2c driver"
+	help
+	  This option enables support for the test chip.

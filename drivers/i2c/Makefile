@@ -1,5 +1,15 @@
-SRC= test_i2c.c \
-     test1_i2c.c
+# Read in config
+-include $(srctree)/include/config/auto.conf
+
+SRC=
+
+ifdef CONFIG_DRIVER_TEST
+SRC += test_i2c.c
+endif
+
+ifdef CONFIG_DRIVER_TEST1
+SRC += test1_i2c.c
+endif
 
 OBJ= $(SRC:.c=.o)
 EXEC=built-in.o

@@ -1,0 +1,13 @@
+config SANDBOX
+	bool
+	default y
+
+config BOARDINFO
+	string
+	default "sandbox"
+
+config ARCH_LINUX
+	bool
+
+source common/Kconfig
+source drivers/Kconfig
