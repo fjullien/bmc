@@ -26,3 +26,7 @@ arch/sandbox/os/i2c-openbmc-stub.ko.unsigned
 arch/sandbox/os/i2c-openbmc-stub.mod.c
 arch/sandbox/os/modules.order
 
+# Kconfig
+include/config/
+include/generated/
+
