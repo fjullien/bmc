@@ -6,7 +6,8 @@ MAKEFLAGS = --no-print-directory
 INCLUDES = -I$(shell pwd)/include
 
 CC=$(CROSS_COMPILE)gcc
-CFLAGS=-W -Wall -ansi -pedantic $(INCLUDES)
+LD=$(CROSS_COMPILE)ld
+CFLAGS=-W -Wall -ansi -pedantic -MMD $(INCLUDES)
 LDFLAGS=
 EXEC=hello
 SRC= $(wildcard *.c)

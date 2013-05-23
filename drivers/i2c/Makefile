@@ -19,3 +19,5 @@ $(EXEC): $(OBJ)
 
 clean:
 	@rm -rf *.o *.d
+
+-include $(SRC:.c=.d)
