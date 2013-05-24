@@ -20,11 +20,11 @@
 *.app
 
 # os/module
-arch/sandbox/os/.tmp_versions/
-arch/sandbox/os/Module.symvers
-arch/sandbox/os/i2c-openbmc-stub.ko.unsigned
-arch/sandbox/os/i2c-openbmc-stub.mod.c
-arch/sandbox/os/modules.order
+arch/sandbox/os/modules/.tmp_versions/
+arch/sandbox/os/modules/Module.symvers
+arch/sandbox/os/modules/i2c-openbmc-stub.ko.unsigned
+arch/sandbox/os/modules/i2c-openbmc-stub.mod.c
+arch/sandbox/os/modules/modules.order
 
 # Kconfig
 include/config/
