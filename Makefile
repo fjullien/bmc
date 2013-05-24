@@ -71,3 +71,8 @@ ifneq ($(CONF),)
 	@mkdir -p include/config include/generated
 	@$(CONF) --silentoldconfig Kconfig
 endif
+
+savedefconfig:
+ifneq ($(CONF),)
+	@$(CONF) --savedefconfig defconfig Kconfig
+endif
