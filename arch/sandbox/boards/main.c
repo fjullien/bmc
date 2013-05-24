@@ -21,7 +21,7 @@
 #include <common.h>
 #include <i2c.h>
 
-int main ( int argc, char *argv[])
+int main(void)
 {
 	test_i2c_func(5, 6);
 	test1_i2c_func(5, 6);
