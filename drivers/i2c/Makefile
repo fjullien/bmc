@@ -18,11 +18,11 @@ all: $(EXEC)
 	@:
 
 $(EXEC): $(OBJ)
-	@echo '   [LD]' $@
+	@echo '   [LD]' $(shell pwd)/$@ | sed -e 's;:\?'$(srctree)/';;' -e 's;'$(srctree)/':\?;;'
 	@$(LD) -r $^ -o $@ $(LDFLAGS)
 
 %.o: %.c
-	@echo '   [CC]' $@
+	@echo '   [CC]' $(shell pwd)/$@ | sed -e 's;:\?'$(srctree)/';;' -e 's;'$(srctree)/':\?;;'
 	@$(CC) -o $@ -c $< $(CFLAGS)
 
 .PHONY: clean

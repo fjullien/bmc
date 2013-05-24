@@ -47,7 +47,7 @@ $(SUBDIRS):
 	@$(MAKE) -w -C $@ $(MAKECMDGOALS) $(MAKEFLAGS)
 
 bmc:
-	@echo '   [CC]' $@
+	@echo '   [CC]' $(shell pwd)/$@ | sed -e 's;:\?'$(srctree)/';;' -e 's;'$(srctree)/':\?;;'
 	@$(CC) $(shell find . | grep built-in.o) -o bmc
 
 clean: $(SUBDIRS)
