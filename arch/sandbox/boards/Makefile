@@ -23,7 +23,7 @@ $(EXEC): $(OBJ)
 
 .PHONY: clean
 
-clean:
+clean distclean:
 	@rm -rf *.o *.d
 
 -include $(SRC:.c=.d)

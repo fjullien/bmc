@@ -1,9 +1,10 @@
-BOARD= boards
+SUBDIRS := boards \
+           os
 
-.PHONY: $(BOARD)
+.PHONY: $(SUBDIRS)
 
-all clean: $(BOARD)
+all clean distclean: $(SUBDIRS)
 	@:
 
-$(BOARD):
+$(SUBDIRS):
 	@$(MAKE) -w -C $@ $(MAKECMDGOALS) $(MAKEFLAGS)

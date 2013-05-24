@@ -12,7 +12,10 @@ SRC += test1_i2c.c
 endif
 
 OBJ= $(SRC:.c=.o)
+
+ifneq ($(OBJ),)
 EXEC=built-in.o
+endif
 
 all: $(EXEC)
 	@:
@@ -27,7 +30,7 @@ $(EXEC): $(OBJ)
 
 .PHONY: clean
 
-clean:
+clean distclean:
 	@rm -rf *.o *.d
 
 -include $(SRC:.c=.d)

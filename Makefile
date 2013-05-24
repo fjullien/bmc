@@ -33,7 +33,7 @@ CONF=./scripts/kconfig/bin/kconfig-conf
 
 SRCARCH 	:= $(ARCH)
 
-export CC CFLAGS LDFLAGS BOARD SUBDIRS Q MAKEFLAGS SRCARCH ARCH VERSION srctree
+export CC CFLAGS LDFLAGS BOARD MAKEFLAGS SRCARCH ARCH VERSION srctree
 
 SUBDIRS := drivers/i2c/ \
            arch/$(ARCH)/
@@ -63,7 +63,7 @@ menuconfig: _menuconfig config
 _menuconfig:
 
 ifneq ($(MCONF),)
-	@export LD_LIBRARY_PATH; \
+	export LD_LIBRARY_PATH; \
 	$(MCONF) Kconfig
 endif
 
