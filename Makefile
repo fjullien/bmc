@@ -21,8 +21,10 @@ SRC= $(wildcard *.c)
 OBJ= $(SRC:.c=.o)
 BOARD=
 
-MCONF=./scripts/mconf/mconf
-CONF=./scripts/conf/conf
+LD_LIBRARY_PATH=$(srctree)/scripts/kconfig/lib
+
+MCONF=./scripts/kconfig/bin/kconfig-mconf
+CONF=./scripts/kconfig/bin/kconfig-conf
 
 # Read in config
 -include $(srctree)/include/config/auto.conf
@@ -59,8 +61,10 @@ distclean: clean
 menuconfig: _menuconfig config
 
 _menuconfig:
+
 ifneq ($(MCONF),)
-	@$(MCONF) Kconfig
+	@export LD_LIBRARY_PATH; \
+	$(MCONF) Kconfig
 endif
 
 .PHONY: config
@@ -69,10 +73,13 @@ config:
 ifneq ($(CONF),)
 	@mkdir -p include/
 	@mkdir -p include/config include/generated
-	@$(CONF) --silentoldconfig Kconfig
+	@export LD_LIBRARY_PATH; \
+	$(CONF) --silentoldconfig Kconfig
 endif
 
 savedefconfig:
+
 ifneq ($(CONF),)
-	@$(CONF) --savedefconfig defconfig Kconfig
+	@export LD_LIBRARY_PATH; \
+	$(CONF) --savedefconfig defconfig Kconfig
 endif
