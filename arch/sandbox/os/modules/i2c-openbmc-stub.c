@@ -32,6 +32,7 @@
 #include <linux/cdev.h>
 #include <asm/uaccess.h>
 #include <asm/io.h>
+#include <linux/kfifo.h>
 
 #define MAX_CHIPS 10
 #define STUB_FUNC (I2C_FUNC_SMBUS_QUICK | I2C_FUNC_SMBUS_BYTE | \
@@ -55,6 +56,8 @@ struct stub_chip {
 
 static struct stub_chip *stub_chips;
 
+static struct __kfifo xfer_fifo;
+
 static u16 read_buffer[256];
 struct cdev stub_cdev;
 dev_t devid;
@@ -67,6 +70,8 @@ static s32 stub_xfer(struct i2c_adapter *adap, u16 addr, unsigned short flags,
 	s32 ret;
 	int i, len;
 	struct stub_chip *chip = NULL;
+
+	printk("--- stub_xfer\n");
 
 	/* Search for the right chip */
 	for (i = 0; i < MAX_CHIPS && chip_addr[i]; i++) {
@@ -259,6 +264,10 @@ static int __init i2c_stub_init(void)
 		pr_info("i2c-stub: Virtual chip at 0x%02x\n", chip_addr[i]);
 	}
 
+	ret = kfifo_alloc(xfer_fifo, 1024, GFP_KERNEL);
+	if (ret)
+		return ret;
+
 	/* Allocate memory for all chips at once */
 	stub_chips = kzalloc(i * sizeof(struct stub_chip), GFP_KERNEL);
 	if (!stub_chips) {
@@ -288,6 +297,7 @@ static void __exit i2c_stub_exit(void)
 	class_destroy(cl);
 	unregister_chrdev_region(devid, 1);
 	kfree(stub_chips);
+	kfifo_free(xfer_fifo);
 }
 
 MODULE_AUTHOR("Mark M. Hoffman <mhoffman@lightlink.com>");

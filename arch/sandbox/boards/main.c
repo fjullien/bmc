@@ -20,9 +20,29 @@
 #include <stdio.h>
 #include <common.h>
 #include <i2c.h>
+#include <linux/i2c-dev.h>
+#include <stdlib.h>
+#include <fcntl.h>
+#include <errno.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <sys/ioctl.h>
 
 int main(void)
 {
+	int file;
+	char buffer[10];
+	int ret;
+
+	buffer[0] = 0;
+	buffer[1] = 1;
+
+	file = open("/dev/stub0", O_RDWR);
+
+	write(file, buffer, 2);
+
+	close(file);
+
 	test_i2c_func(5, 6);
 	test1_i2c_func(5, 6);
 	printf("TEST_COMMON is %d\n", TEST_COMMON);

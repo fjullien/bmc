@@ -38,7 +38,7 @@ export CC CFLAGS LDFLAGS BOARD MAKEFLAGS SRCARCH ARCH VERSION srctree
 SUBDIRS := drivers/i2c/ \
            arch/$(ARCH)/
 
-.PHONY: $(SUBDIRS)
+.PHONY: $(SUBDIRS) bmc
 
 all: $(SUBDIRS) bmc
 	@:
