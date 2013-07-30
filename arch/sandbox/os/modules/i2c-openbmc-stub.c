@@ -33,6 +33,11 @@
 #include <asm/uaccess.h>
 #include <asm/io.h>
 #include <linux/kfifo.h>
+#include <linux/sched.h>
+
+#define STUB_FLUSH_FIFO		0
+#define STUB_FIFO_LEN		1
+#define STUB_CONTROL_FROM_CDEV	2
 
 #define MAX_CHIPS 10
 #define STUB_FUNC (I2C_FUNC_SMBUS_QUICK | I2C_FUNC_SMBUS_BYTE | \
@@ -54,14 +59,23 @@ struct stub_chip {
 				   specification */
 };
 
+struct data_packet {
+	int len;
+	int cmd;
+	u8 buf[32];
+};
+
+#define DATA_HEADER_LEN (sizeof(int) + sizeof(int))
+
 static struct stub_chip *stub_chips;
 
-static struct __kfifo xfer_fifo;
-
-static u16 read_buffer[256];
+static struct kfifo *rx_fifo;
 struct cdev stub_cdev;
 dev_t devid;
 static struct class *cl;
+static uint8_t tx_buffer[33];
+int tx_answer_received = 0;
+int cdev_ctrl = 1;
 
 /* Return negative errno on error. */
 static s32 stub_xfer(struct i2c_adapter *adap, u16 addr, unsigned short flags,
@@ -70,8 +84,7 @@ static s32 stub_xfer(struct i2c_adapter *adap, u16 addr, unsigned short flags,
 	s32 ret;
 	int i, len;
 	struct stub_chip *chip = NULL;
-
-	printk("--- stub_xfer\n");
+	struct data_packet rx_data;
 
 	/* Search for the right chip */
 	for (i = 0; i < MAX_CHIPS && chip_addr[i]; i++) {
@@ -86,6 +99,11 @@ static s32 stub_xfer(struct i2c_adapter *adap, u16 addr, unsigned short flags,
 	switch (size) {
 
 	case I2C_SMBUS_QUICK:
+		rx_data.len = DATA_HEADER_LEN + 1;
+		rx_data.cmd = I2C_SMBUS_QUICK;
+		rx_data.buf[0] = 1;
+		__kfifo_put(rx_fifo, (unsigned char *)&rx_data, rx_data.len);
+
 		dev_dbg(&adap->dev, "smbus quick - addr 0x%02x\n", addr);
 		ret = 0;
 		break;
@@ -93,6 +111,12 @@ static s32 stub_xfer(struct i2c_adapter *adap, u16 addr, unsigned short flags,
 	case I2C_SMBUS_BYTE:
 		if (read_write == I2C_SMBUS_WRITE) {
 			chip->pointer = command;
+
+			rx_data.len = DATA_HEADER_LEN + 1;
+			rx_data.cmd = I2C_SMBUS_BYTE;
+			rx_data.buf[0] = command;
+			__kfifo_put(rx_fifo, (unsigned char *)&rx_data, rx_data.len);
+
 			dev_dbg(&adap->dev,
 				"smbus byte - addr 0x%02x, wrote 0x%02x.\n",
 				addr, command);
@@ -110,6 +134,13 @@ static s32 stub_xfer(struct i2c_adapter *adap, u16 addr, unsigned short flags,
 		if (read_write == I2C_SMBUS_WRITE) {
 			chip->words[command] &= 0xff00;
 			chip->words[command] |= data->byte;
+
+			rx_data.len = DATA_HEADER_LEN + 2;
+			rx_data.cmd = I2C_SMBUS_BYTE_DATA;
+			rx_data.buf[0] = command;
+			rx_data.buf[1] = data->byte;
+			__kfifo_put(rx_fifo, (unsigned char *)&rx_data, rx_data.len);
+
 			dev_dbg(&adap->dev,
 				"smbus byte data - addr 0x%02x, wrote 0x%02x at 0x%02x.\n",
 				addr, data->byte, command);
@@ -127,6 +158,14 @@ static s32 stub_xfer(struct i2c_adapter *adap, u16 addr, unsigned short flags,
 	case I2C_SMBUS_WORD_DATA:
 		if (read_write == I2C_SMBUS_WRITE) {
 			chip->words[command] = data->word;
+
+			rx_data.len = DATA_HEADER_LEN + 3;
+			rx_data.cmd = I2C_SMBUS_WORD_DATA;
+			rx_data.buf[0] = command;
+			rx_data.buf[1] = (data->word & 0xff00) >> 8;
+			rx_data.buf[2] = data->word & 0xff;
+			__kfifo_put(rx_fifo, (unsigned char *)&rx_data, rx_data.len);
+
 			dev_dbg(&adap->dev,
 				"smbus word data - addr 0x%02x, wrote 0x%04x at 0x%02x.\n",
 				addr, data->word, command);
@@ -141,21 +180,33 @@ static s32 stub_xfer(struct i2c_adapter *adap, u16 addr, unsigned short flags,
 		break;
 
 	case I2C_SMBUS_BLOCK_DATA:
-		if (read_write == I2C_SMBUS_READ) {
-			len = data->block[0] = 10;
-			for (i = 0; i < len; i++)
-				data->block[1 + i] = 0x11 + i;
+		if (read_write == I2C_SMBUS_WRITE) {
+			len = data->block[0];
+			rx_data.len = DATA_HEADER_LEN + len + 1;
+			rx_data.cmd = I2C_SMBUS_BLOCK_DATA;
+			rx_data.buf[0] = command;
+			for (i = 0; i < len; i++) {
+				rx_data.buf[i + 1] = data->block[1 + i];
+				chip->words[command + i] &= 0xff00;
+				chip->words[command + i] |= data->block[1 + i];
+			}
+			__kfifo_put(rx_fifo, (unsigned char *)&rx_data, rx_data.len);
+
 			dev_dbg(&adap->dev,
-				"i2c block data - addr 0x%02x, read %d bytes at 0x%02x.\n",
+				"i2c block data - addr 0x%02x, wrote %d bytes at 0x%02x.\n",
 				addr, len, command);
 		} else {
-			len = data->block[0];
-			for (i = 0; i < len; i++)
-				printk("%02X ", data->block[1 + i]);
-			printk("\n");
+			// data->block[0] gives read size
+			while (!tx_answer_received)
+				schedule();
+			tx_answer_received = 0;
+			data->block[0] = tx_buffer[0];
+			for (i = 0; i < data->block[0]; i++) {
+				data->block[1 + i] = tx_buffer[1 + i];
+			}
 			dev_dbg(&adap->dev,
-				"i2c block data - addr 0x%02x, wrote  %d bytes at 0x%02x.\n",
-				addr, len, command);
+				"i2c block data - addr 0x%02x, read  %d bytes at 0x%02x.\n",
+				addr, data->block[0], command);
 		}
 
 		ret = 0;
@@ -164,21 +215,25 @@ static s32 stub_xfer(struct i2c_adapter *adap, u16 addr, unsigned short flags,
 	case I2C_SMBUS_I2C_BLOCK_DATA:
 		len = data->block[0];
 		if (read_write == I2C_SMBUS_WRITE) {
+			rx_data.len = DATA_HEADER_LEN + len + 1;
+			rx_data.cmd = I2C_SMBUS_BLOCK_DATA;
 			for (i = 0; i < len; i++) {
+				rx_data.buf[i + 1] = data->block[1 + i];
 				chip->words[command + i] &= 0xff00;
 				chip->words[command + i] |= data->block[1 + i];
 			}
-			dev_dbg(&adap->dev,
+			__kfifo_put(rx_fifo, (unsigned char *)&rx_data, rx_data.len);
+			/*dev_dbg(&adap->dev,
 				"i2c block data - addr 0x%02x, wrote %d bytes at 0x%02x.\n",
-				addr, len, command);
+				addr, len, command);*/
 		} else {
 			for (i = 0; i < len; i++) {
 				data->block[1 + i] =
 					chip->words[command + i] & 0xff;
 			}
-			dev_dbg(&adap->dev,
+			/*dev_dbg(&adap->dev,
 				"i2c block data - addr 0x%02x, read  %d bytes at 0x%02x.\n",
-				addr, len, command);
+				addr, len, command);*/
 		}
 
 		ret = 0;
@@ -214,26 +269,63 @@ static struct i2c_adapter stub_adapter = {
 
 static ssize_t stub_write(struct file *file, const char __user *data, size_t len, loff_t *ppos)
 {
-	printk("----> stub_write\n");
+	if (copy_from_user(tx_buffer, data, len))
+		return -EFAULT;
+	tx_answer_received = 1;
 	return len;
 }
 
 static ssize_t stub_read(struct file *file, char __user *buf, size_t len, loff_t *ppos)
 {
-	printk("----> stub_read\n");
-	return len;
+	uint8_t buffer[32];
+	int ret;
+
+	/*buffer = kmalloc(len, GFP_KERNEL);
+	if (!buffer)
+		return 0*/
+	ret = __kfifo_get(rx_fifo, buffer, len);
+
+	if (copy_to_user(buf, buffer, len)) {
+		/*kfree(buffer);*/
+		return -EFAULT;
+	}
+
+	/*kfree(buffer);*/
+
+	return ret;
 }
 
-static ssize_t stub_open(struct inode *inode, struct file *file)
+static int stub_open(struct inode *inode, struct file *file)
 {
-	printk("----> stub_open\n");
+	//printk("----> stub_open\n");
 	return 0;
 }
 
 static int stub_release(struct inode *inode, struct file *file)
 {
-	printk("----> stub_release\n");
+	//printk("----> stub_release\n");
 	return 0;
+}
+
+static int stub_ioctl(struct inode *inode, struct file *file, unsigned int cmd, unsigned long arg)
+{
+	int ret = 0;
+
+	switch(cmd) {
+	case STUB_FLUSH_FIFO:
+		__kfifo_reset(rx_fifo);
+		break;
+	case STUB_FIFO_LEN:
+		*(int *)arg = kfifo_len(rx_fifo);
+		break;
+	case STUB_CONTROL_FROM_CDEV:
+		cdev_ctrl = !!arg;
+		break;
+	default:
+		break;
+	}
+
+	return ret;
 }
 
 static const struct file_operations stub_cdev_fops = {
@@ -242,7 +334,7 @@ static const struct file_operations stub_cdev_fops = {
 	.read = stub_read,
 	.open = stub_open,
 	.release = stub_release,
-	/*.ioctl = stub_ioctl,*/
+	.ioctl = stub_ioctl,
 };
 
 static int __init i2c_stub_init(void)
@@ -264,9 +356,11 @@ static int __init i2c_stub_init(void)
 		pr_info("i2c-stub: Virtual chip at 0x%02x\n", chip_addr[i]);
 	}
 
-	ret = kfifo_alloc(xfer_fifo, 1024, GFP_KERNEL);
-	if (ret)
-		return ret;
+	rx_fifo = kfifo_alloc(1024, GFP_KERNEL, NULL);
+	if (!rx_fifo)
+		return -ENOMEM;
+
+	memset(tx_buffer, 0, ARRAY_SIZE(tx_buffer));
 
 	/* Allocate memory for all chips at once */
 	stub_chips = kzalloc(i * sizeof(struct stub_chip), GFP_KERNEL);
@@ -297,7 +391,7 @@ static void __exit i2c_stub_exit(void)
 	class_destroy(cl);
 	unregister_chrdev_region(devid, 1);
 	kfree(stub_chips);
-	kfifo_free(xfer_fifo);
+	kfifo_free(rx_fifo);
 }
 
 MODULE_AUTHOR("Mark M. Hoffman <mhoffman@lightlink.com>");

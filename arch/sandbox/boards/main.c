@@ -31,15 +31,27 @@
 int main(void)
 {
 	int file;
-	char buffer[10];
-	int ret;
-
-	buffer[0] = 0;
-	buffer[1] = 1;
+	unsigned char buffer[20];
+	int ret = 0;
+	int i;
 
 	file = open("/dev/stub0", O_RDWR);
 
-	write(file, buffer, 2);
+	while (!ret)
+		ret = read(file, buffer, 1);
+
+	ret = read(file, &buffer[1], buffer[0] - 1);
+
+	for (i = 0; i < buffer[0]; i++)
+		printf("buf[%d] = %x\n", i, buffer[i]);
+
+	buffer[0] = 4; /* len */
+	buffer[1] = 0x09;
+	buffer[2] = 0x11;
+	buffer[3] = 0x00;
+	buffer[4] = 0xAB;
+
+	write(file, buffer, 5);
 
 	close(file);
 
