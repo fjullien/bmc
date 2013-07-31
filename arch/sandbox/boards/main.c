@@ -45,13 +45,19 @@ int main(void)
 	for (i = 0; i < buffer[0]; i++)
 		printf("buf[%d] = %x\n", i, buffer[i]);
 
-	buffer[0] = 4; /* len */
-	buffer[1] = 0x09;
-	buffer[2] = 0x11;
+	buffer[0] = 9;    /* len */
+	buffer[1] = 0x04; /* net_fn, lun */
+	buffer[2] = 0x00; /* cmd */
+	
 	buffer[3] = 0x00;
 	buffer[4] = 0xAB;
+	buffer[5] = 0xAB;
+	buffer[6] = 0xAB;
+	buffer[7] = 0xAB;
+	buffer[8] = 0xAB;
+	buffer[9] = 0xAB;
 
-	write(file, buffer, 5);
+	write(file, buffer, buffer[0]);
 
 	close(file);
 
