@@ -49,7 +49,7 @@ int main(void)
 	buffer[1] = 0x04; /* net_fn, lun */
 	buffer[2] = 0x00; /* cmd */
 	
-	buffer[3] = 0x00;
+	buffer[3] = 0x00; /* Completion code */
 	buffer[4] = 0xAB;
 	buffer[5] = 0xAB;
 	buffer[6] = 0xAB;
@@ -57,7 +57,7 @@ int main(void)
 	buffer[8] = 0xAB;
 	buffer[9] = 0xAB;
 
-	write(file, buffer, buffer[0]);
+	write(file, buffer, buffer[0] + 1);
 
 	close(file);
 
