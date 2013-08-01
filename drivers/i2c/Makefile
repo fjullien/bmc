@@ -3,6 +3,10 @@
 
 SRC=
 
+ifdef CONFIG_DRIVER_STUB
+SRC += i2c-stub.c
+endif
+
 ifdef CONFIG_DRIVER_TEST
 SRC += test_i2c.c
 endif

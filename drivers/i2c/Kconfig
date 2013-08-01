@@ -7,3 +7,8 @@ config DRIVER_TEST1
 	bool "test1 i2c driver"
 	help
 	  This option enables support for the test chip.
+
+config DRIVER_STUB
+	bool "i2c-stub driver"
+	help
+	  This option enables support for the i2c-stub driver.
