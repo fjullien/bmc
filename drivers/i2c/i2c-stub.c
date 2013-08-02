@@ -53,13 +53,13 @@ int i2c_stub_get_msg(struct i2c_master *master, int *len, unsigned char *buffer)
 		return 0;
 	}
 
-	ret = read(master->file, &buffer[4], rxlen - 4);
+	ret = read(master->file, &buffer[0], rxlen - 4);
 	if (ret <= 0) {
 		*len = 0;
 		return -1;
 	}
 
-	*len = rxlen;
+	*len = rxlen - 4;
 
 	return 0;
 }
