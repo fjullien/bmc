@@ -27,23 +27,23 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <sys/ioctl.h>
+#include <i2c.h>
+
+extern struct i2c_master master;
 
 int main(void)
 {
-	int file;
-	unsigned char buffer[20];
-	int ret = 0;
+	int len = 0;
+	unsigned char buffer[256];
 	int i;
 
-	file = open("/dev/stub0", O_RDWR);
+	master.init(&master);
 
-	while (!ret)
-		ret = read(file, buffer, 1);
+	while (!len)
+		master.get_msg(&master, &len, buffer);
 
-	ret = read(file, &buffer[1], buffer[0] - 1);
-
-	for (i = 0; i < buffer[0]; i++)
-		printf("buf[%d] = %x\n", i, buffer[i]);
+	for (i = 0; i < len; i++)
+		printf("buffer[%d] = %x\n", i, buffer[i]);
 
 	buffer[0] = 9;    /* len */
 	buffer[1] = 0x04; /* net_fn, lun */
@@ -57,12 +57,6 @@ int main(void)
 	buffer[8] = 0xAB;
 	buffer[9] = 0xAB;
 
-	write(file, buffer, buffer[0] + 1);
+	master.send_msg(&master, 9, buffer);
 
-	close(file);
-
-	test_i2c_func(5, 6);
-	test1_i2c_func(5, 6);
-	printf("TEST_COMMON is %d\n", TEST_COMMON);
-	return 0;
 }
