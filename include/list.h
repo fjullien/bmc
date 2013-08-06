@@ -1,8 +1,10 @@
 #ifndef _LINUX_LIST_H
 #define _LINUX_LIST_H
 
-#include <linux/stddef.h> /* for NULL */
+#include <linux/stddef.h>
 #include <common.h>
+
+#define offsetof(st, m) __builtin_offsetof(st, m)
 
 /*
  * Simple doubly linked list implementation.

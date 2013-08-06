@@ -14,7 +14,7 @@ INCLUDES       := -I$(srctree)/include \
 
 CC=$(CROSS_COMPILE)gcc
 LD=$(CROSS_COMPILE)ld
-CFLAGS=-W -Wall -ansi -std=c99 -pedantic -MMD $(INCLUDES) -Wno-variadic-macros
+CFLAGS=-W -Wall -MMD $(INCLUDES)
 LDFLAGS=
 EXEC=hello
 SRC= $(wildcard *.c)

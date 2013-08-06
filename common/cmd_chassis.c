@@ -1,5 +1,5 @@
 /*
- * main.c
+ * cmd_chassis.c
  *
  * Copyright (c) 2013 Franck Jullien <elec4fun@gmail.com>
  *
@@ -28,41 +28,37 @@
 #include <unistd.h>
 #include <sys/ioctl.h>
 #include <i2c.h>
+#include <list.h>
 #include <command.h>
 #include <init.h>
 
-extern initcall_t __bmc_initcalls_start[], __bmc_early_initcalls_end[],
-		  __bmc_initcalls_end[];
-
-extern struct i2c_master master;
-
-int main(void)
+int do_get_chassis_capabilities(unsigned char *rxbuffer, int rxlen, unsigned char *txbuffer, int *txlen)
 {
-	int rxlen = 0;
-	int txlen = 0;
-	unsigned char rxbuffer[256];
-	unsigned char txbuffer[256];
-
-	initcall_t *initcall;
-	int result;
-
-	for (initcall = __bmc_initcalls_start;
-			initcall < __bmc_initcalls_end; initcall++) {
-		/*printf("initcall-> %pS\n", *initcall);*/
-		result = (*initcall)();
-		/*printf("initcall<- %pS (%d)\n", *initcall, result);*/
-	}
-/*
-	master.init(&master);
-
-	while (!rxlen) {
-		master.get_msg(&master, &rxlen, rxbuffer);
-		sleep(1);
-	}
-*/
-	process_command(rxbuffer, rxlen, txbuffer, &txlen);
-
-/*	master.send_msg(&master, txlen, txbuffer);*/
-
 	return 0;
 }
+
+int do_get_chassis_status(unsigned char *rxbuffer, int rxlen, unsigned char *txbuffer, int *txlen)
+{
+	return 0;
+}
+
+static struct command cmd_get_capabilities = {
+	.name = "get-chassis-capabilities",
+	.cmd_number = 0,
+	.cmd_handler = do_get_chassis_capabilities,
+};
+
+static struct command cmd_get_status = {
+	.name = "get-chassis-status",
+	.cmd_number = 1,
+	.cmd_handler = do_get_chassis_status,
+};
+
+int register_command_chassis(void)
+{
+	register_command(&cmd_get_capabilities);
+	register_command(&cmd_get_status);
+	return 0;
+}
+
+core_initcall(register_command_chassis);

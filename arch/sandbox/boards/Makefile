@@ -1,7 +1,7 @@
 # Read in config
 -include $(srctree)/include/config/auto.conf
 
-SRC= main.c
+SRC= board.c
 
 #ifdef CONFIG_DRIVER_TEST
 #SRC += test_i2c.c

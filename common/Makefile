@@ -3,7 +3,9 @@
 
 SRC=
 
+SRC += main.c
 SRC += cmd_core.c
+SRC += cmd_chassis.c
 
 OBJ= $(SRC:.c=.o)
 

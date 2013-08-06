@@ -27,9 +27,9 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <sys/ioctl.h>
-#include <i2c.h>
-#include <list.h>
 #include <command.h>
+#include <list.h>
+#include <linux/stddef.h>
 
 LIST_HEAD(cmd_list);
 
@@ -39,8 +39,14 @@ int register_command(struct command *cmd)
 	return 0;
 }
 
-int prepare_answer(unsigned char *rxbuffer, int rxlen, unsigned char *txbuffer, int *txlen)
+int process_command(unsigned char *rxbuffer, int rxlen, unsigned char *txbuffer, int *txlen)
 {
+	struct command *cmd;
+
+	for_each_command(cmd) {
+		printf("%s\n", cmd->name);
+	}
+#if 0
 	int i;
 
 	for (i = 0; i < rxlen; i++)
@@ -58,7 +64,7 @@ int prepare_answer(unsigned char *rxbuffer, int rxlen, unsigned char *txbuffer, 
 	txbuffer[6] = 0xAB;
 	txbuffer[7] = 0xAB;
 	txbuffer[8] = 0xAB;
-
+#endif
 	return 0;
-}
 
+}
