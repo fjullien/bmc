@@ -300,7 +300,7 @@ static struct i2c_adapter stub_adapter = {
 
 static ssize_t stub_write(struct file *file, const char __user *data, size_t len, loff_t *ppos)
 {
-	if (copy_from_user(tx_buffer, data, len))
+	if (copy_from_user(tx_buffer, data, min(ARRAY_SIZE(tx_buffer), len)))
 		return -EFAULT;
 	tx_answer_received = 1;
 	return len;
