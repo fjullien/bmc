@@ -24,6 +24,6 @@ $(EXEC): $(OBJ)
 .PHONY: clean
 
 clean distclean:
-	@rm -rf *.o *.d
+	@rm -rf *.o *.d bmc.lds
 
 -include $(SRC:.c=.d)
