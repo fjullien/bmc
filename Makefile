@@ -36,6 +36,7 @@ SRCARCH 	:= $(ARCH)
 export CC CFLAGS LDFLAGS BOARD MAKEFLAGS SRCARCH ARCH VERSION srctree
 
 SUBDIRS := drivers/i2c/ \
+           common \
            arch/$(ARCH)/
 
 .PHONY: $(SUBDIRS) bmc
@@ -48,7 +49,8 @@ $(SUBDIRS):
 
 bmc:
 	@echo '   [CC]' $(shell pwd)/$@ | sed -e 's;:\?'$(srctree)/';;' -e 's;'$(srctree)/':\?;;'
-	@$(CC) $(shell find . | grep built-in.o) -o bmc
+	@$(CC) -E -Wp,-MD,$(srctree)/arch/$(ARCH)/boards/.barebox.lds.d  -nostdinc $(CFLAGS) -C -P -D__ASSEMBLY__ -o arch/sandbox/boards/bmc.lds arch/sandbox/boards/bmc.lds.S
+	@$(CC) -o bmc -Wl,-T,$(srctree)/arch/$(ARCH)/boards/bmc.lds $(shell find . | grep built-in.o)
 
 clean: $(SUBDIRS)
 	@rm -rf bmc

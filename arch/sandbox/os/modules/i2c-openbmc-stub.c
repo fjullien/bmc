@@ -34,6 +34,7 @@
 #include <asm/io.h>
 #include <linux/kfifo.h>
 #include <linux/sched.h>
+#include <linux/version.h>
 
 #define STUB_FLUSH_FIFO		0
 #define STUB_FIFO_LEN		1
@@ -68,8 +69,11 @@ struct data_packet {
 #define DATA_HEADER_LEN (sizeof(int) + sizeof(int))
 
 static struct stub_chip *stub_chips;
-
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,33)
+static struct kfifo rx_fifo;
+#else
 static struct kfifo *rx_fifo;
+#endif
 struct cdev stub_cdev;
 dev_t devid;
 static struct class *cl;
@@ -102,8 +106,11 @@ static s32 stub_xfer(struct i2c_adapter *adap, u16 addr, unsigned short flags,
 		rx_data.len = DATA_HEADER_LEN + 1;
 		rx_data.cmd = I2C_SMBUS_QUICK;
 		rx_data.buf[0] = 1;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,33)
+		kfifo_in(&rx_fifo, (unsigned char *)&rx_data, rx_data.len);
+#else
 		__kfifo_put(rx_fifo, (unsigned char *)&rx_data, rx_data.len);
-
+#endif
 		dev_dbg(&adap->dev, "smbus quick - addr 0x%02x\n", addr);
 		ret = 0;
 		break;
@@ -115,7 +122,11 @@ static s32 stub_xfer(struct i2c_adapter *adap, u16 addr, unsigned short flags,
 			rx_data.len = DATA_HEADER_LEN + 1;
 			rx_data.cmd = I2C_SMBUS_BYTE;
 			rx_data.buf[0] = command;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,33)
+			kfifo_in(&rx_fifo, (unsigned char *)&rx_data, rx_data.len);
+#else
 			__kfifo_put(rx_fifo, (unsigned char *)&rx_data, rx_data.len);
+#endif
 
 			dev_dbg(&adap->dev,
 				"smbus byte - addr 0x%02x, wrote 0x%02x.\n",
@@ -139,7 +150,11 @@ static s32 stub_xfer(struct i2c_adapter *adap, u16 addr, unsigned short flags,
 			rx_data.cmd = I2C_SMBUS_BYTE_DATA;
 			rx_data.buf[0] = command;
 			rx_data.buf[1] = data->byte;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,33)
+			kfifo_in(&rx_fifo, (unsigned char *)&rx_data, rx_data.len);
+#else
 			__kfifo_put(rx_fifo, (unsigned char *)&rx_data, rx_data.len);
+#endif
 
 			dev_dbg(&adap->dev,
 				"smbus byte data - addr 0x%02x, wrote 0x%02x at 0x%02x.\n",
@@ -164,7 +179,11 @@ static s32 stub_xfer(struct i2c_adapter *adap, u16 addr, unsigned short flags,
 			rx_data.buf[0] = command;
 			rx_data.buf[1] = (data->word & 0xff00) >> 8;
 			rx_data.buf[2] = data->word & 0xff;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,33)
+			kfifo_in(&rx_fifo, (unsigned char *)&rx_data, rx_data.len);
+#else
 			__kfifo_put(rx_fifo, (unsigned char *)&rx_data, rx_data.len);
+#endif
 
 			dev_dbg(&adap->dev,
 				"smbus word data - addr 0x%02x, wrote 0x%04x at 0x%02x.\n",
@@ -194,7 +213,11 @@ static s32 stub_xfer(struct i2c_adapter *adap, u16 addr, unsigned short flags,
 				chip->words[command + i] &= 0xff00;
 				chip->words[command + i] |= data->block[1 + i];
 			}
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,33)
+			kfifo_in(&rx_fifo, (unsigned char *)&rx_data, rx_data.len);
+#else
 			__kfifo_put(rx_fifo, (unsigned char *)&rx_data, rx_data.len);
+#endif
 
 			dev_dbg(&adap->dev,
 				"i2c block data - addr 0x%02x, wrote %d bytes at 0x%02x.\n",
@@ -226,7 +249,11 @@ static s32 stub_xfer(struct i2c_adapter *adap, u16 addr, unsigned short flags,
 				chip->words[command + i] &= 0xff00;
 				chip->words[command + i] |= data->block[1 + i];
 			}
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,33)
+			kfifo_in(&rx_fifo, (unsigned char *)&rx_data, rx_data.len);
+#else
 			__kfifo_put(rx_fifo, (unsigned char *)&rx_data, rx_data.len);
+#endif
 			/*dev_dbg(&adap->dev,
 				"i2c block data - addr 0x%02x, wrote %d bytes at 0x%02x.\n",
 				addr, len, command);*/
@@ -284,11 +311,11 @@ static ssize_t stub_read(struct file *file, char __user *buf, size_t len, loff_t
 	uint8_t buffer[32];
 	int ret;
 
-	/*buffer = kmalloc(len, GFP_KERNEL);
-	if (!buffer)
-		return 0*/
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,33)
+	ret = kfifo_out(&rx_fifo, buffer, len);
+#else
 	ret = __kfifo_get(rx_fifo, buffer, len);
-
+#endif
 	if (copy_to_user(buf, buffer, len)) {
 		/*kfree(buffer);*/
 		return -EFAULT;
@@ -310,17 +337,25 @@ static int stub_release(struct inode *inode, struct file *file)
 	//printk("----> stub_release\n");
 	return 0;
 }
-
+/*
 static int stub_ioctl(struct inode *inode, struct file *file, unsigned int cmd, unsigned long arg)
 {
 	int ret = 0;
 
 	switch(cmd) {
 	case STUB_FLUSH_FIFO:
+#if LINUX_VERSION_3_2
+		kfifo_reset(&rx_fifo);
+#else
 		__kfifo_reset(rx_fifo);
+#endif
 		break;
 	case STUB_FIFO_LEN:
+#if LINUX_VERSION_3_2
+		*(int *)arg = kfifo_size(&rx_fifo);
+#else
 		*(int *)arg = kfifo_len(rx_fifo);
+#endif
 		break;
 	case STUB_CONTROL_FROM_CDEV:
 		cdev_ctrl = !!arg;
@@ -331,14 +366,14 @@ static int stub_ioctl(struct inode *inode, struct file *file, unsigned int cmd, 
 
 	return ret;
 }
-
+*/
 static const struct file_operations stub_cdev_fops = {
 	.owner = THIS_MODULE,
 	.write = stub_write,
 	.read = stub_read,
 	.open = stub_open,
 	.release = stub_release,
-	.ioctl = stub_ioctl,
+	/*.ioctl = stub_ioctl,*/
 };
 
 static int __init i2c_stub_init(void)
@@ -360,10 +395,15 @@ static int __init i2c_stub_init(void)
 		pr_info("i2c-stub: Virtual chip at 0x%02x\n", chip_addr[i]);
 	}
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,33)
+	ret = kfifo_alloc(&rx_fifo, 1024, GFP_KERNEL);
+	if (ret < 0)
+		return -ENOMEM;
+#else
 	rx_fifo = kfifo_alloc(1024, GFP_KERNEL, NULL);
 	if (!rx_fifo)
 		return -ENOMEM;
-
+#endif
 	memset(tx_buffer, 0, ARRAY_SIZE(tx_buffer));
 
 	/* Allocate memory for all chips at once */
@@ -395,7 +435,9 @@ static void __exit i2c_stub_exit(void)
 	class_destroy(cl);
 	unregister_chrdev_region(devid, 1);
 	kfree(stub_chips);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,33)
 	kfifo_free(rx_fifo);
+#endif
 }
 
 MODULE_AUTHOR("Mark M. Hoffman <mhoffman@lightlink.com>");

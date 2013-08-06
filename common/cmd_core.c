@@ -1,5 +1,5 @@
 /*
- * main.c
+ * cmd_core.c
  *
  * Copyright (c) 2013 Franck Jullien <elec4fun@gmail.com>
  *
@@ -28,41 +28,37 @@
 #include <unistd.h>
 #include <sys/ioctl.h>
 #include <i2c.h>
+#include <list.h>
 #include <command.h>
-#include <init.h>
 
-extern initcall_t __bmc_initcalls_start[], __bmc_early_initcalls_end[],
-		  __bmc_initcalls_end[];
+LIST_HEAD(cmd_list);
 
-extern struct i2c_master master;
-
-int main(void)
+int register_command(struct command *cmd)
 {
-	int rxlen = 0;
-	int txlen = 0;
-	unsigned char rxbuffer[256];
-	unsigned char txbuffer[256];
-
-	initcall_t *initcall;
-	int result;
-
-	for (initcall = __bmc_initcalls_start;
-			initcall < __bmc_initcalls_end; initcall++) {
-		/*printf("initcall-> %pS\n", *initcall);*/
-		result = (*initcall)();
-		/*printf("initcall<- %pS (%d)\n", *initcall, result);*/
-	}
-
-	printf("initcalls done\n");
-
-	master.init(&master);
-
-	while (!rxlen) {
-		master.get_msg(&master, &rxlen, rxbuffer);
-		sleep(1);
-	}
-
-	prepare_answer(rxbuffer, rxlen, txbuffer, &txlen);
-
-	master.send_msg(&master, txlen, txbuffer);
+	list_add_tail(&cmd->list, &cmd_list);
+	return 0;
 }
+
+int prepare_answer(unsigned char *rxbuffer, int rxlen, unsigned char *txbuffer, int *txlen)
+{
+	int i;
+
+	for (i = 0; i < rxlen; i++)
+		printf("rxbuffer[%d] = %x\n", i, rxbuffer[i]);
+
+	*txlen = 9;
+
+	txbuffer[0] = 0x04; /* net_fn, lun */
+	txbuffer[1] = 0x00; /* cmd */
+	
+	txbuffer[2] = 0x00; /* Completion code */
+	txbuffer[3] = 0xAB;
+	txbuffer[4] = 0xAB;
+	txbuffer[5] = 0xAB;
+	txbuffer[6] = 0xAB;
+	txbuffer[7] = 0xAB;
+	txbuffer[8] = 0xAB;
+
+	return 0;
+}
+

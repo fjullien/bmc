@@ -18,4 +18,6 @@
 
 #define ARRAY_SIZE(arr)		(sizeof(arr) / sizeof((arr)[0]) + __must_be_array(arr))
 
+#define UNUSED(x) (void)(x)
+
 #endif
