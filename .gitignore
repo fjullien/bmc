@@ -3,6 +3,7 @@
 *.cmd
 *.ko
 *.d
+bmc
 
 # Libraries
 *.lib
@@ -24,8 +25,10 @@ arch/sandbox/os/modules/Module.symvers
 arch/sandbox/os/modules/i2c-openbmc-stub.ko.unsigned
 arch/sandbox/os/modules/i2c-openbmc-stub.mod.c
 arch/sandbox/os/modules/modules.order
+arch/sandbox/boards/bmc.lds
 
 # Kconfig
 include/config/
 include/generated/
+.config.old
 
