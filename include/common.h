@@ -9,6 +9,8 @@
 
 #define TEST_COMMON	4
 
+#define __TO_BE_IMPLEMENTED__	0
+
 #ifdef DEBUG
 #define pr_debug(fmt, arg...)	printf(fmt, ##arg)
 #else

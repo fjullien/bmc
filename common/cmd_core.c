@@ -19,17 +19,12 @@
 
 #include <stdio.h>
 #include <common.h>
-#include <i2c.h>
-#include <linux/i2c-dev.h>
 #include <stdlib.h>
-#include <fcntl.h>
-#include <errno.h>
-#include <sys/types.h>
-#include <unistd.h>
-#include <sys/ioctl.h>
 #include <command.h>
 #include <list.h>
 #include <linux/stddef.h>
+
+#include <freeipmi/freeipmi_bmc_intf.h>
 
 LIST_HEAD(cmd_list);
 
@@ -42,29 +37,23 @@ int register_command(struct command *cmd)
 int process_command(unsigned char *rxbuffer, int rxlen, unsigned char *txbuffer, int *txlen)
 {
 	struct command *cmd;
+	int cmd_supported = 0;
 
 	for_each_command(cmd) {
-		printf("%s\n", cmd->name);
+		if (rxbuffer[CMD] == cmd->cmd_number) {
+			cmd->cmd_handler(rxbuffer, rxlen, txbuffer, txlen);
+			cmd_supported = 1;
+			break;
+		}
 	}
-#if 0
-	int i;
 
-	for (i = 0; i < rxlen; i++)
-		printf("rxbuffer[%d] = %x\n", i, rxbuffer[i]);
+	if (!cmd_supported) {
+		txbuffer[SSIF_HEADER] = RESP_NETFFN_LUN(rxbuffer[SSIF_HEADER]);
+		txbuffer[CMD] = rxbuffer[CMD];
+		txbuffer[COMPLETION] = BMC_IPMI_INVALID_COMMAND;
+		*txlen = 3;
+	}
 
-	*txlen = 9;
-
-	txbuffer[0] = 0x04; /* net_fn, lun */
-	txbuffer[1] = 0x00; /* cmd */
-	
-	txbuffer[2] = 0x00; /* Completion code */
-	txbuffer[3] = 0xAB;
-	txbuffer[4] = 0xAB;
-	txbuffer[5] = 0xAB;
-	txbuffer[6] = 0xAB;
-	txbuffer[7] = 0xAB;
-	txbuffer[8] = 0xAB;
-#endif
 	return 0;
 
 }

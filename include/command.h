@@ -5,6 +5,12 @@
 
 #define for_each_command(cmd) list_for_each_entry(cmd, &cmd_list, list)
 
+#define SSIF_HEADER	0
+#define CMD		1
+#define COMPLETION	2
+
+#define RESP_NETFFN_LUN(netfn_lun)	(netfn_lun | (1 << 2))
+
 struct command {
 	const char *name;
 	struct list_head list;

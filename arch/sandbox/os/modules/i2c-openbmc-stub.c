@@ -36,6 +36,8 @@
 #include <linux/sched.h>
 #include <linux/version.h>
 
+static struct timer_list timer;
+
 #define STUB_FLUSH_FIFO		0
 #define STUB_FIFO_LEN		1
 #define STUB_CONTROL_FROM_CDEV	2
@@ -61,12 +63,12 @@ struct stub_chip {
 };
 
 struct data_packet {
-	int len;
-	int cmd;
+	u8 len;
+	u8 cmd;
 	u8 buf[32];
 };
 
-#define DATA_HEADER_LEN (sizeof(int) + sizeof(int))
+#define DATA_HEADER_LEN (sizeof(u8) + sizeof(u8))
 
 static struct stub_chip *stub_chips;
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,33)
@@ -80,6 +82,11 @@ static struct class *cl;
 static uint8_t tx_buffer[33];
 int tx_answer_received = 0;
 int cdev_ctrl = 1;
+
+void timer_callback(unsigned long data)
+{
+	tx_answer_received = 1;
+}
 
 /* Return negative errno on error. */
 static s32 stub_xfer(struct i2c_adapter *adap, u16 addr, unsigned short flags,
@@ -204,8 +211,8 @@ static s32 stub_xfer(struct i2c_adapter *adap, u16 addr, unsigned short flags,
 			rx_data.len = DATA_HEADER_LEN + len + 1;
 			rx_data.cmd = I2C_SMBUS_BLOCK_DATA;
 			rx_data.buf[0] = command;
-			printk("rx_data.len    = %08x\n", rx_data.len);
-			printk("rx_data.cmd    = %08x\n", rx_data.cmd);
+			printk("rx_data.len    = %02x\n", rx_data.len);
+			printk("rx_data.cmd    = %02x\n", rx_data.cmd);
 			printk("rx_data.buf[0] = %02x\n", rx_data.buf[0]);
 			for (i = 0; i < len; i++) {
 				printk("-- data = %02x\n", data->block[1 + i]);
@@ -224,6 +231,8 @@ static s32 stub_xfer(struct i2c_adapter *adap, u16 addr, unsigned short flags,
 				addr, len, command);
 		} else {
 			// data->block[0] gives read size
+			ret = mod_timer(&timer, jiffies + msecs_to_jiffies(10000) );
+
 			while (!tx_answer_received)
 				schedule();
 			tx_answer_received = 0;
@@ -421,6 +430,9 @@ static int __init i2c_stub_init(void)
 
 	device_create(cl, NULL, devid, NULL, "stub0");
 
+	setup_timer(&timer, timer_callback, 0);
+
+
 	ret = i2c_add_adapter(&stub_adapter);
 	if (ret)
 		kfree(stub_chips);
@@ -437,6 +449,7 @@ static void __exit i2c_stub_exit(void)
 	kfree(stub_chips);
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,33)
 	kfifo_free(rx_fifo);
+	del_timer(&timer);
 #endif
 }
 

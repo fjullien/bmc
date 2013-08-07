@@ -8,6 +8,7 @@ MAKEFLAGS = --no-print-directory
 srctree		:= $(CURDIR)
 
 INCLUDES       := -I$(srctree)/include \
+                  -I$(srctree)/include/freeipmi/spec \
                   -I$(srctree)/arch/$(ARCH)/include \
                   -include $(srctree)/include/generated/autoconf.h \
                   -include $(srctree)/include/kconfig.h
@@ -41,8 +42,11 @@ SUBDIRS := drivers/i2c/ \
 
 .PHONY: $(SUBDIRS) bmc
 
-all: $(SUBDIRS) bmc
+all: brdconfig $(SUBDIRS) bmc
 	@:
+
+brdconfig:
+	@cp $(srctree)/arch/$(ARCH)/boards/$(BOARD)/config.h $(srctree)/include/config.h
 
 $(SUBDIRS):
 	@$(MAKE) -w -C $@ $(MAKECMDGOALS) $(MAKEFLAGS)

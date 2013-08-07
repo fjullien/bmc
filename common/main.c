@@ -52,17 +52,17 @@ int main(void)
 		result = (*initcall)();
 		/*printf("initcall<- %pS (%d)\n", *initcall, result);*/
 	}
-/*
+
 	master.init(&master);
 
 	while (!rxlen) {
 		master.get_msg(&master, &rxlen, rxbuffer);
 		sleep(1);
 	}
-*/
+
 	process_command(rxbuffer, rxlen, txbuffer, &txlen);
 
-/*	master.send_msg(&master, txlen, txbuffer);*/
+	master.send_msg(&master, txlen, txbuffer);
 
 	return 0;
 }

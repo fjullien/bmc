@@ -46,20 +46,31 @@ int i2c_stub_get_msg(struct i2c_master *master, int *len, unsigned char *buffer)
 	int ret;
 	int bytes;
 	int rxlen;
+	unsigned char *tmp;
 
-	bytes = read(master->file, &rxlen, 4);
+	bytes = read(master->file, &rxlen, 1);
 	if (!bytes) {
 		*len = 0;
 		return 0;
 	}
+	
+	tmp = malloc(rxlen - 1);
+	if (!tmp) {
+		*len = 0;
+		return -1;
+	}
 
-	ret = read(master->file, &buffer[0], rxlen - 4);
+	ret = read(master->file, tmp, rxlen - 1);
 	if (ret <= 0) {
 		*len = 0;
 		return -1;
 	}
 
-	*len = rxlen - 4;
+	memcpy(buffer, &tmp[2], tmp[1]);
+
+	*len = tmp[1];
+
+	free(tmp);
 
 	return 0;
 }
