@@ -210,7 +210,7 @@ static s32 stub_xfer(struct i2c_adapter *adap, u16 addr, unsigned short flags,
 			len = data->block[0];
 			rx_data.len = DATA_HEADER_LEN + len + 1;
 			rx_data.cmd = I2C_SMBUS_BLOCK_DATA;
-			rx_data.buf[0] = command;
+			rx_data.buf[0] = len; /*command*/;
 			printk("rx_data.len    = %02x\n", rx_data.len);
 			printk("rx_data.cmd    = %02x\n", rx_data.cmd);
 			printk("rx_data.buf[0] = %02x\n", rx_data.buf[0]);

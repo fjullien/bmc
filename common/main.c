@@ -42,6 +42,7 @@ int main(void)
 	int txlen = 0;
 	unsigned char rxbuffer[256];
 	unsigned char txbuffer[256];
+	int i;
 
 	initcall_t *initcall;
 	int result;

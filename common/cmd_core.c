@@ -37,21 +37,20 @@ int register_command(struct command *cmd)
 int process_command(unsigned char *rxbuffer, int rxlen, unsigned char *txbuffer, int *txlen)
 {
 	struct command *cmd;
-	int cmd_supported = 0;
+	int ret = COMMAND_NOT_SUPPORTED;
+
+	/*printf("Received cmd 0x%02x\n", rxbuffer[CMD]);*/
 
 	for_each_command(cmd) {
 		if (rxbuffer[CMD] == cmd->cmd_number) {
-			cmd->cmd_handler(rxbuffer, rxlen, txbuffer, txlen);
-			cmd_supported = 1;
+			ret = cmd->cmd_handler(rxbuffer, rxlen, txbuffer, txlen);
 			break;
 		}
 	}
 
-	if (!cmd_supported) {
-		txbuffer[SSIF_HEADER] = RESP_NETFFN_LUN(rxbuffer[SSIF_HEADER]);
-		txbuffer[CMD] = rxbuffer[CMD];
-		txbuffer[COMPLETION] = BMC_IPMI_INVALID_COMMAND;
-		*txlen = 3;
+	if (ret == COMMAND_NOT_SUPPORTED || ret == NO_PLATFORM_HANDLER) {
+		printf("!!!!!!!!!!!!\n");
+		SET_COMPLETION_NO_DATA(txlen, txbuffer, rxbuffer, BMC_IPMI_INVALID_COMMAND);
 	}
 
 	return 0;

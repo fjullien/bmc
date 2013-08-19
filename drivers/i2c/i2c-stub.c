@@ -47,6 +47,7 @@ int i2c_stub_get_msg(struct i2c_master *master, int *len, unsigned char *buffer)
 	int bytes;
 	int rxlen;
 	unsigned char *tmp;
+	int i;
 
 	bytes = read(master->file, &rxlen, 1);
 	if (!bytes) {
